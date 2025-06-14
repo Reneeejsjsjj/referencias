@@ -16,19 +16,21 @@
   /* Modal de login/admin */
   #loginModal, #adminPanel { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
+    background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000;
   }
   #loginModal.active, #adminPanel.active { display: flex; }
-  #loginModal form, #adminPanel { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 400px; }
+  #loginModal form, #adminPanel .panel-content { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 400px; }
 
-  #adminPanel textarea { width: 100%; height: 80px; margin-top: 0.5rem; }
+  #adminPanel .panel-content { max-height: 90vh; overflow-y: auto; }
+  #adminPanel textarea { width: 100%; height: 80px; margin-top: 0.5rem; box-sizing: border-box; }
   #adminPanel img.preview { width: 100%; max-height: 200px; object-fit: contain; margin-top: 0.5rem; border: 1px solid #ccc; border-radius: 8px; }
   #adminPanel button { margin-top: 1rem; padding: 0.5rem 1rem; }
-  #adminPanel header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-  #adminPanel header button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; }
+  #adminPanel .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+  #adminPanel .panel-header h2 { margin: 0; }
+  #adminPanel .panel-header button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; margin: 0; }
   #adminPanel .refs-list { max-height: 150px; overflow-y: auto; margin-top: 1rem; border: 1px solid #ddd; padding: 0.5rem; }
-  #adminPanel .refs-list div { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
-  #adminPanel .refs-list div button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0 6px; cursor: pointer; }
+  #adminPanel .refs-list div { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; padding: 0.2rem; }
+  #adminPanel .refs-list div button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0 6px; cursor: pointer; margin: 0; }
 </style>
 </head>
 <body>
@@ -58,25 +60,33 @@
 
 <!-- Painel Admin -->
 <div id="adminPanel">
-  <header>
-    <h2>Painel Admin</h2>
-    <button id="btnLogout">Sair</button>
-  </header>
-  <form id="refForm">
-    <label>Foto (upload):<br/><input type="file" id="refPhoto" accept="image/*" required /></label>
-    <img class="preview" id="photoPreview" alt="Prévia da imagem" style="display:none;" />
-    <label>Descrição:<br/><textarea id="refDesc" placeholder="Digite a descrição" required></textarea></label>
-    <button type="submit">Adicionar Referência</button>
-  </form>
+  <div class="panel-content">
+    <div class="panel-header">
+      <h2>Painel Admin</h2>
+      <button id="btnLogout">Sair</button>
+    </div>
+    <form id="refForm">
+      <!-- Este é o campo de upload de arquivo -->
+      <label>Foto (upload):<br/><input type="file" id="refPhoto" accept="image/*" required /></label>
+      
+      <!-- Esta imagem mostrará uma prévia da foto selecionada -->
+      <img class="preview" id="photoPreview" alt="Prévia da imagem" style="display:none;" />
+      
+      <label>Descrição:<br/><textarea id="refDesc" placeholder="Digite a descrição" required></textarea></label>
+      <button type="submit">Adicionar Referência</button>
+    </form>
 
-  <h3>Referências Cadastradas</h3>
-  <div class="refs-list" id="refsList"></div>
+    <h3>Referências Cadastradas</h3>
+    <div class="refs-list" id="refsList"></div>
+  </div>
 </div>
 
 <script>
+  // --- CONFIGURAÇÕES ---
   const USERNAME = 'renen';
   const PASSWORD = 'que12qu.';
 
+  // --- ELEMENTOS DA PÁGINA ---
   const mainContent = document.getElementById('mainContent');
   const btnAdminAccess = document.getElementById('btnAdminAccess');
   const loginModal = document.getElementById('loginModal');
@@ -84,7 +94,6 @@
   const loginUser = document.getElementById('loginUser');
   const loginPass = document.getElementById('loginPass');
   const loginCancel = document.getElementById('loginCancel');
-
   const adminPanel = document.getElementById('adminPanel');
   const btnLogout = document.getElementById('btnLogout');
   const refForm = document.getElementById('refForm');
@@ -93,30 +102,28 @@
   const refDesc = document.getElementById('refDesc');
   const refsList = document.getElementById('refsList');
 
+  // --- FUNÇÕES DE DADOS (localStorage) ---
   function getReferences() {
     const refs = localStorage.getItem('references');
-    if (!refs) return [];
-    try {
-      return JSON.parse(refs);
-    } catch {
-      return [];
-    }
+    return refs ? JSON.parse(refs) : [];
   }
 
   function saveReferences(refs) {
     localStorage.setItem('references', JSON.stringify(refs));
   }
 
+  // --- FUNÇÕES DE RENDERIZAÇÃO ---
   function renderReferences() {
     const refs = getReferences();
+    mainContent.innerHTML = ''; // Limpa o conteúdo atual
     if (refs.length === 0) {
       mainContent.innerHTML = '<p>Nenhuma referência disponível.</p>';
       return;
     }
-    mainContent.innerHTML = '';
     refs.forEach((ref) => {
       const div = document.createElement('div');
       div.className = 'referencia';
+      // A mágica acontece aqui: `ref.photo` contém a imagem em Base64, que o `<img>` entende
       div.innerHTML = `
         <img src="${ref.photo}" alt="Foto da referência" />
         <div class="desc">${ref.desc.replace(/\n/g, '<br>')}</div>
@@ -130,23 +137,29 @@
     refsList.innerHTML = '';
     refs.forEach((ref, index) => {
       const div = document.createElement('div');
-      div.textContent = ref.desc.length > 30 ? ref.desc.slice(0,30) + '...' : ref.desc;
+      const text = document.createElement('span');
+      text.textContent = ref.desc.length > 30 ? ref.desc.slice(0, 30) + '...' : ref.desc;
+      
       const delBtn = document.createElement('button');
       delBtn.textContent = 'X';
       delBtn.title = 'Excluir';
       delBtn.onclick = () => {
-        if (confirm('Excluir essa referência?')) {
-          refs.splice(index,1);
-          saveReferences(refs);
+        if (confirm('Tem certeza que deseja excluir esta referência?')) {
+          const currentRefs = getReferences();
+          currentRefs.splice(index, 1);
+          saveReferences(currentRefs);
           renderReferences();
-          renderAdminReferences();
+          renderAdminReferences(); // Atualiza a lista no painel
         }
       };
+      
+      div.appendChild(text);
       div.appendChild(delBtn);
       refsList.appendChild(div);
     });
   }
 
+  // --- EVENTOS DE LOGIN E PAINEL ---
   btnAdminAccess.onclick = () => {
     loginModal.classList.add('active');
     loginUser.focus();
@@ -159,27 +172,23 @@
 
   loginForm.onsubmit = (e) => {
     e.preventDefault();
-    const user = loginUser.value.trim();
-    const pass = loginPass.value.trim();
-    if (user === USERNAME && pass === PASSWORD) {
+    if (loginUser.value.trim() === USERNAME && loginPass.value.trim() === PASSWORD) {
       loginModal.classList.remove('active');
       loginForm.reset();
-      openAdminPanel();
+      adminPanel.classList.add('active');
+      renderAdminReferences();
     } else {
       alert('Usuário ou senha incorretos.');
     }
   };
-
-  function openAdminPanel() {
-    adminPanel.classList.add('active');
-    renderAdminReferences();
-  }
-
+  
   btnLogout.onclick = () => {
     adminPanel.classList.remove('active');
   };
 
-  // Preview imagem após upload
+  // --- EVENTOS DO FORMULÁRIO DE UPLOAD ---
+
+  // Mostra a prévia da imagem quando um arquivo é selecionado
   refPhoto.onchange = () => {
     const file = refPhoto.files[0];
     if (file) {
@@ -195,34 +204,40 @@
     }
   };
 
+  // Processa o formulário ao clicar em "Adicionar Referência"
   refForm.onsubmit = (e) => {
     e.preventDefault();
     const file = refPhoto.files[0];
     const desc = refDesc.value.trim();
-    if (!file) {
-      alert('Selecione uma foto.');
+
+    if (!file || !desc) {
+      alert('Por favor, selecione uma foto e preencha a descrição.');
       return;
     }
-    if (!desc) {
-      alert('Informe uma descrição.');
-      return;
-    }
+    
+    // Usa o FileReader para converter a imagem em texto (Base64)
     const reader = new FileReader();
-    reader.onload = e => {
-      const photoBase64 = e.target.result; // imagem em base64
+    reader.onload = event => {
+      const photoBase64 = event.target.result; // A imagem como texto
+      
       const refs = getReferences();
-      refs.push({ photo: photoBase64, desc });
+      refs.unshift({ photo: photoBase64, desc: desc }); // Adiciona no início da lista
       saveReferences(refs);
+      
+      // Atualiza a tela e limpa o formulário
       renderReferences();
       renderAdminReferences();
       refForm.reset();
       photoPreview.src = '';
       photoPreview.style.display = 'none';
     };
+    
+    // Inicia a leitura do arquivo
     reader.readAsDataURL(file);
   };
 
-  // Carrega as referências públicas ao iniciar
+  // --- INICIALIZAÇÃO ---
+  // Carrega as referências públicas ao abrir a página
   renderReferences();
 </script>
 
