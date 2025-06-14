@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Referências - Renen</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+  header { background: #333; color: white; padding: 1rem; text-align: center; }
+  main { max-width: 800px; margin: 1rem auto; padding: 1rem; background: white; border-radius: 8px; }
+  .referencia { border-bottom: 1px solid #ddd; padding: 1rem 0; display: flex; gap: 1rem; align-items: center; }
+  .referencia img { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; }
+  .desc { flex: 1; }
+  footer { text-align: center; padding: 1rem; font-size: 0.9rem; background: #eee; position: fixed; bottom: 0; width: 100%; }
+
+  /* Modal de login/admin */
+  #loginModal, #adminPanel { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
+  }
+  #loginModal.active, #adminPanel.active { display: flex; }
+  #loginModal form, #adminPanel { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 400px; }
+
+  #adminPanel textarea { width: 100%; height: 80px; margin-top: 0.5rem; }
+  #adminPanel img.preview { width: 100%; max-height: 200px; object-fit: contain; margin-top: 0.5rem; border: 1px solid #ccc; border-radius: 8px; }
+  #adminPanel button { margin-top: 1rem; padding: 0.5rem 1rem; }
+  #adminPanel header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  #adminPanel header button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; }
+  #adminPanel .refs-list { max-height: 150px; overflow-y: auto; margin-top: 1rem; border: 1px solid #ddd; padding: 0.5rem; }
+  #adminPanel .refs-list div { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
+  #adminPanel .refs-list div button { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 0 6px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Referências de Renen</h1>
+</header>
+
+<main id="mainContent">
+  <p>Carregando referências...</p>
+</main>
+
+<footer>
+  <button id="btnAdminAccess">Acesso Admin</button>
+</footer>
+
+<!-- Modal Login -->
+<div id="loginModal">
+  <form id="loginForm">
+    <h2>Login Admin</h2>
+    <label>Usuário:<br/><input type="text" id="loginUser" required /></label><br/><br/>
+    <label>Senha:<br/><input type="password" id="loginPass" required /></label><br/><br/>
+    <button type="submit">Entrar</button>
+    <button type="button" id="loginCancel">Cancelar</button>
+  </form>
+</div>
+
+<!-- Painel Admin -->
+<div id="adminPanel">
+  <header>
+    <h2>Painel Admin</h2>
+    <button id="btnLogout">Sair</button>
+  </header>
+  <form id="refForm">
+    <label>Foto (URL):<br/><input type="url" id="refPhoto" placeholder="Cole URL da imagem" required /></label>
+    <img class="preview" id="photoPreview" alt="Prévia da imagem" />
+    <label>Descrição:<br/><textarea id="refDesc" placeholder="Digite a descrição"></textarea></label>
+    <button type="submit">Adicionar Referência</button>
+  </form>
+
+  <h3>Referências Cadastradas</h3>
+  <div class="refs-list" id="refsList"></div>
+</div>
+
+<script>
+  // Configuração do login - seu usuário e senha
+  const USERNAME = 'renen';
+  const PASSWORD = 'que12qu.';
+
+  // DOM Elements
+  const mainContent = document.getElementById('mainContent');
+  const btnAdminAccess = document.getElementById('btnAdminAccess');
+  const loginModal = document.getElementById('loginModal');
+  const loginForm = document.getElementById('loginForm');
+  const loginUser = document.getElementById('loginUser');
+  const loginPass = document.getElementById('loginPass');
+  const loginCancel = document.getElementById('loginCancel');
+
+  const adminPanel = document.getElementById('adminPanel');
+  const btnLogout = document.getElementById('btnLogout');
+  const refForm = document.getElementById('refForm');
+  const refPhoto = document.getElementById('refPhoto');
+  const photoPreview = document.getElementById('photoPreview');
+  const refDesc = document.getElementById('refDesc');
+  const refsList = document.getElementById('refsList');
+
+  // Pega referências do localStorage
+  function getReferences() {
+    const refs = localStorage.getItem('references');
+    if (!refs) return [];
+    try {
+      return JSON.parse(refs);
+    } catch {
+      return [];
+    }
+  }
+
+  // Salva referências no localStorage
+  function saveReferences(refs) {
+    localStorage.setItem('references', JSON.stringify(refs));
+  }
+
+  // Renderiza referências para o público
+  function renderReferences() {
+    const refs = getReferences();
+    if (refs.length === 0) {
+      mainContent.innerHTML = '<p>Nenhuma referência disponível.</p>';
+      return;
+    }
+    mainContent.innerHTML = '';
+    refs.forEach((ref) => {
+      const div = document.createElement('div');
+      div.className = 'referencia';
+      div.innerHTML = `
+        <img src="${ref.photo}" alt="Foto da referência" />
+        <div class="desc">${ref.desc.replace(/\n/g, '<br>')}</div>
+      `;
+      mainContent.appendChild(div);
+    });
+  }
+
+  // Renderiza referências no admin para edição
+  function renderAdminReferences() {
+    const refs = getReferences();
+    refsList.innerHTML = '';
+    refs.forEach((ref, index) => {
+      const div = document.createElement('div');
+      div.textContent = ref.desc.length > 30 ? ref.desc.slice(0,30) + '...' : ref.desc;
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'X';
+      delBtn.title = 'Excluir';
+      delBtn.onclick = () => {
+        if (confirm('Excluir essa referência?')) {
+          refs.splice(index,1);
+          saveReferences(refs);
+          renderReferences();
+          renderAdminReferences();
+        }
+      };
+      div.appendChild(delBtn);
+      refsList.appendChild(div);
+    });
+  }
+
+  // Login evento
+  btnAdminAccess.onclick = () => {
+    loginModal.classList.add('active');
+    loginUser.focus();
+  };
+
+  loginCancel.onclick = () => {
+    loginModal.classList.remove('active');
+    loginForm.reset();
+  };
+
+  loginForm.onsubmit = (e) => {
+    e.preventDefault();
+    const user = loginUser.value.trim();
+    const pass = loginPass.value.trim();
+    if (user === USERNAME && pass === PASSWORD) {
+      loginModal.classList.remove('active');
+      loginForm.reset();
+      openAdminPanel();
+    } else {
+      alert('Usuário ou senha incorretos.');
+    }
+  };
+
+  function openAdminPanel() {
+    adminPanel.classList.add('active');
+    renderAdminReferences();
+  }
+
+  btnLogout.onclick = () => {
+    adminPanel.classList.remove('active');
+  };
+
+  // Preview imagem URL
+  refPhoto.oninput = () => {
+    const url = refPhoto.value.trim();
+    if (url) {
+      photoPreview.src = url;
+      photoPreview.style.display = 'block';
+    } else {
+      photoPreview.src = '';
+      photoPreview.style.display = 'none';
+    }
+  };
+
+  // Adicionar nova referência
+  refForm.onsubmit = (e) => {
+    e.preventDefault();
+    const photo = refPhoto.value.trim();
+    const desc = refDesc.value.trim();
+    if (!photo) {
+      alert('Informe a URL da foto.');
+      return;
+    }
+    if (!desc) {
+      alert('Informe uma descrição.');
+      return;
+    }
+    const refs = getReferences();
+    refs.push({photo, desc});
+    saveReferences(refs);
+    renderReferences();
+    renderAdminReferences();
+    refForm.reset();
+    photoPreview.src = '';
+    photoPreview.style.display = 'none';
+  };
+
+  // Ao carregar a página, já mostra as referências públicas
+  renderReferences();
+
+</script>
+
+</body>
+</html>
