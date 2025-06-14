@@ -63,9 +63,9 @@
     <button id="btnLogout">Sair</button>
   </header>
   <form id="refForm">
-    <label>Foto (URL):<br/><input type="url" id="refPhoto" placeholder="Cole URL da imagem" required /></label>
-    <img class="preview" id="photoPreview" alt="Prévia da imagem" />
-    <label>Descrição:<br/><textarea id="refDesc" placeholder="Digite a descrição"></textarea></label>
+    <label>Foto (upload):<br/><input type="file" id="refPhoto" accept="image/*" required /></label>
+    <img class="preview" id="photoPreview" alt="Prévia da imagem" style="display:none;" />
+    <label>Descrição:<br/><textarea id="refDesc" placeholder="Digite a descrição" required></textarea></label>
     <button type="submit">Adicionar Referência</button>
   </form>
 
@@ -74,11 +74,9 @@
 </div>
 
 <script>
-  // Configuração do login - seu usuário e senha
   const USERNAME = 'renen';
   const PASSWORD = 'que12qu.';
 
-  // DOM Elements
   const mainContent = document.getElementById('mainContent');
   const btnAdminAccess = document.getElementById('btnAdminAccess');
   const loginModal = document.getElementById('loginModal');
@@ -95,7 +93,6 @@
   const refDesc = document.getElementById('refDesc');
   const refsList = document.getElementById('refsList');
 
-  // Pega referências do localStorage
   function getReferences() {
     const refs = localStorage.getItem('references');
     if (!refs) return [];
@@ -106,12 +103,10 @@
     }
   }
 
-  // Salva referências no localStorage
   function saveReferences(refs) {
     localStorage.setItem('references', JSON.stringify(refs));
   }
 
-  // Renderiza referências para o público
   function renderReferences() {
     const refs = getReferences();
     if (refs.length === 0) {
@@ -130,7 +125,6 @@
     });
   }
 
-  // Renderiza referências no admin para edição
   function renderAdminReferences() {
     const refs = getReferences();
     refsList.innerHTML = '';
@@ -153,7 +147,6 @@
     });
   }
 
-  // Login evento
   btnAdminAccess.onclick = () => {
     loginModal.classList.add('active');
     loginUser.focus();
@@ -186,44 +179,50 @@
     adminPanel.classList.remove('active');
   };
 
-  // Preview imagem URL
-  refPhoto.oninput = () => {
-    const url = refPhoto.value.trim();
-    if (url) {
-      photoPreview.src = url;
-      photoPreview.style.display = 'block';
+  // Preview e leitura do arquivo upload
+  refPhoto.onchange = () => {
+    const file = refPhoto.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        photoPreview.src = e.target.result;
+        photoPreview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
     } else {
       photoPreview.src = '';
       photoPreview.style.display = 'none';
     }
   };
 
-  // Adicionar nova referência
   refForm.onsubmit = (e) => {
     e.preventDefault();
-    const photo = refPhoto.value.trim();
+    const file = refPhoto.files[0];
     const desc = refDesc.value.trim();
-    if (!photo) {
-      alert('Informe a URL da foto.');
+    if (!file) {
+      alert('Selecione uma foto.');
       return;
     }
     if (!desc) {
       alert('Informe uma descrição.');
       return;
     }
-    const refs = getReferences();
-    refs.push({photo, desc});
-    saveReferences(refs);
-    renderReferences();
-    renderAdminReferences();
-    refForm.reset();
-    photoPreview.src = '';
-    photoPreview.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = e => {
+      const photoBase64 = e.target.result; // base64 da imagem
+      const refs = getReferences();
+      refs.push({ photo: photoBase64, desc });
+      saveReferences(refs);
+      renderReferences();
+      renderAdminReferences();
+      refForm.reset();
+      photoPreview.src = '';
+      photoPreview.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
   };
 
-  // Ao carregar a página, já mostra as referências públicas
   renderReferences();
-
 </script>
 
 </body>
