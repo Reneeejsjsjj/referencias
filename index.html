@@ -179,7 +179,7 @@
     adminPanel.classList.remove('active');
   };
 
-  // Preview e leitura do arquivo upload
+  // Preview imagem após upload
   refPhoto.onchange = () => {
     const file = refPhoto.files[0];
     if (file) {
@@ -209,7 +209,7 @@
     }
     const reader = new FileReader();
     reader.onload = e => {
-      const photoBase64 = e.target.result; // base64 da imagem
+      const photoBase64 = e.target.result; // imagem em base64
       const refs = getReferences();
       refs.push({ photo: photoBase64, desc });
       saveReferences(refs);
@@ -222,6 +222,7 @@
     reader.readAsDataURL(file);
   };
 
+  // Carrega as referências públicas ao iniciar
   renderReferences();
 </script>
 
